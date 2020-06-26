@@ -20,8 +20,13 @@ async fn main() -> std::io::Result<()> {
 
     if let (Ok(cert), Ok(key)) = (env::var("TIDE_CERT"), env::var("TIDE_KEY")) {
         tide::log::with_level(tide::log::LevelFilter::Info);
-        let tls = TlsListener::from_addr("localhost:4433", cert, key);
-        app.listen(tls).await?;
+        app.listen(
+            TlsListener::build()
+                .addrs("localhost:4433")
+                .cert(cert)
+                .key(key),
+        )
+        .await?;
     } else {
         eprintln!(
             "
