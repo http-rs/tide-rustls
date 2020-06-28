@@ -87,6 +87,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-dup"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c897277cf0cd71c8bbd2ae769aae5e2bd4600f01cff4bd4077ac5e847a15b5a1"
+dependencies = [
+ "futures-io",
+ "simple-mutex",
+]
+
+[[package]]
 name = "async-h1"
 version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -378,6 +388,12 @@ dependencies = [
  "backtrace",
  "version_check",
 ]
+
+[[package]]
+name = "event-listener"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "05b148ad9bf80edb24098fd1ab4883c7c381e7900c1a38e512fb0586c4501505"
 
 [[package]]
 name = "fake-simd"
@@ -1033,6 +1049,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "simple-mutex"
+version = "1.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "38aabbeafa6f6dead8cebf246fe9fae1f9215c8d29b3a69f93bd62a9e4a3dcd6"
+dependencies = [
+ "event-listener",
+]
+
+[[package]]
 name = "slab"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1185,6 +1210,7 @@ dependencies = [
 name = "tide-tls"
 version = "0.1.0"
 dependencies = [
+ "async-dup",
  "async-h1",
  "async-std",
  "async-tls",

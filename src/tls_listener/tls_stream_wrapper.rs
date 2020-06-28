@@ -1,8 +1,8 @@
-use async_std::io::{self, Read, Write};
+use async_dup::{Arc, Mutex};
+use async_std::io::{Read, Result, Write};
 use async_std::net::TcpStream;
 use async_tls::server::TlsStream;
 use std::pin::Pin;
-use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll};
 
 #[derive(Clone)]
@@ -19,37 +19,21 @@ impl Read for TlsStreamWrapper {
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         buf: &mut [u8],
-    ) -> Poll<std::io::Result<usize>> {
-        match self.0.lock() {
-            Err(e) => Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, e.to_string()))),
-            Ok(mut this) => Read::poll_read(Pin::new(&mut *this), cx, buf),
-        }
+    ) -> Poll<Result<usize>> {
+        Pin::new(&mut &*self.0).poll_read(cx, buf)
     }
 }
 
 impl Write for TlsStreamWrapper {
-    fn poll_write(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-        buf: &[u8],
-    ) -> Poll<std::io::Result<usize>> {
-        match self.0.lock() {
-            Err(e) => Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, e.to_string()))),
-            Ok(mut this) => Write::poll_write(Pin::new(&mut *this), cx, buf),
-        }
+    fn poll_write(self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<Result<usize>> {
+        Pin::new(&mut &*self.0).poll_write(cx, buf)
     }
 
-    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
-        match self.0.lock() {
-            Err(e) => Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, e.to_string()))),
-            Ok(mut this) => Write::poll_flush(Pin::new(&mut *this), cx),
-        }
+    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
+        Pin::new(&mut &*self.0).poll_flush(cx)
     }
 
-    fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
-        match self.0.lock() {
-            Err(e) => Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, e.to_string()))),
-            Ok(mut this) => Write::poll_close(Pin::new(&mut *this), cx),
-        }
+    fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
+        Pin::new(&mut &*self.0).poll_close(cx)
     }
 }
