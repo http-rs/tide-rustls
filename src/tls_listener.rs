@@ -1,5 +1,5 @@
-use crate::{BoxFuture, TcpConnection, TlsListenerBuilder, TlsListenerConfig, TlsStreamWrapper};
-use std::fmt::{self, Debug, Display, Formatter};
+use crate::{TcpConnection, TlsListenerBuilder, TlsListenerConfig, TlsStreamWrapper};
+
 use tide::listener::{Listener, ToListener};
 use tide::Server;
 
@@ -11,10 +11,13 @@ use async_tls::TlsAcceptor;
 use rustls::internal::pemfile::{certs, pkcs8_private_keys};
 use rustls::{Certificate, NoClientAuth, PrivateKey, ServerConfig};
 
+use std::fmt::{self, Debug, Display, Formatter};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
+use std::pin::Pin;
 use std::sync::Arc;
+use std::time::Duration;
 
 #[derive(Debug)]
 pub struct TlsListener {
@@ -123,7 +126,10 @@ impl<State: Send + Sync + 'static> ToListener<State> for TlsListenerBuilder {
 }
 
 impl<State: Send + Sync + 'static> Listener<State> for TlsListener {
-    fn listen<'a>(&'a mut self, app: Server<State>) -> BoxFuture<'a, async_std::io::Result<()>> {
+    fn listen<'a>(
+        &'a mut self,
+        app: Server<State>,
+    ) -> Pin<Box<dyn Future<Output = io::Result<()>> + Send + 'a>> {
         Box::pin(async move {
             let acceptor = self.configure().await?;
             let listener = self.connect().await?;
@@ -133,7 +139,7 @@ impl<State: Send + Sync + 'static> Listener<State> for TlsListener {
                 match stream {
                     Err(ref e) if is_transient_error(e) => continue,
                     Err(error) => {
-                        let delay = std::time::Duration::from_millis(500);
+                        let delay = Duration::from_millis(500);
                         tide::log::error!("Error: {}. Pausing for {:?}.", error, delay);
                         task::sleep(delay).await;
                         continue;
