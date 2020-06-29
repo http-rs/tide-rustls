@@ -1207,8 +1207,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "tide-tls"
-version = "0.1.0"
+name = "tide-rustls"
+version = "0.0.1"
 dependencies = [
  "async-dup",
  "async-h1",

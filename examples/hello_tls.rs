@@ -1,7 +1,6 @@
 use std::env;
 use tide::prelude::*;
-mod tls_listener;
-use tls_listener::TlsListener;
+use tide_rustls::TlsListener;
 
 async fn endpoint(req: tide::Request<()>) -> tide::Result {
     Ok(json!({
@@ -33,7 +32,7 @@ async fn main() -> std::io::Result<()> {
 To run this app locally:
 * install https://github.com/FiloSottile/mkcert
 * $ mkcert -key-file key.pem -cert-file cert.pem localhost 127.0.0.1 ::1
-* $ env TIDE_CERT=cert.pem TIDE_KEY=key.pem cargo run
+* $ env TIDE_CERT=cert.pem TIDE_KEY=key.pem cargo run --example hello_tls
 * $ curl -v https://localhost:4433/secure
 "
         );

@@ -3,7 +3,7 @@ use async_std::net::TcpListener;
 
 use rustls::ServerConfig;
 
-use super::{TlsListener, TlsListenerConfig, TlsListenerConnection};
+use super::{TcpConnection, TlsListener, TlsListenerConfig};
 
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::path::{Path, PathBuf};
@@ -65,8 +65,8 @@ impl TlsListenerBuilder {
         };
 
         let connection = match (tcp, addrs) {
-            (Some(tcp), None) => TlsListenerConnection::Connected(tcp),
-            (None, Some(addrs)) => TlsListenerConnection::Addrs(addrs),
+            (Some(tcp), None) => TcpConnection::Connected(tcp),
+            (None, Some(addrs)) => TcpConnection::Addrs(addrs),
             _ => {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidInput,
@@ -75,6 +75,6 @@ impl TlsListenerBuilder {
             }
         };
 
-        Ok(TlsListener { connection, config })
+        Ok(TlsListener::new(connection, config))
     }
 }

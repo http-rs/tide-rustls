@@ -1,6 +1,4 @@
-mod tls_listener_builder;
-mod tls_stream_wrapper;
-
+use crate::{BoxFuture, TcpConnection, TlsListenerBuilder, TlsListenerConfig, TlsStreamWrapper};
 use std::fmt::{self, Debug, Display, Formatter};
 use tide::listener::{Listener, ToListener};
 use tide::Server;
@@ -14,84 +12,20 @@ use rustls::internal::pemfile::{certs, pkcs8_private_keys};
 use rustls::{Certificate, NoClientAuth, PrivateKey, ServerConfig};
 
 use std::fs::File;
-use std::future::Future;
 use std::io::BufReader;
-use std::net::SocketAddr;
-use std::path::{Path, PathBuf};
-use std::pin::Pin;
+use std::path::Path;
 use std::sync::Arc;
-
-use tls_listener_builder::TlsListenerBuilder;
-pub use tls_stream_wrapper::TlsStreamWrapper;
-
-type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
-
-impl Default for TlsListenerConfig {
-    fn default() -> Self {
-        Self::Unconfigured
-    }
-}
-pub(crate) enum TlsListenerConfig {
-    Unconfigured,
-    Acceptor(TlsAcceptor),
-    ServerConfig(ServerConfig),
-    Paths { cert: PathBuf, key: PathBuf },
-}
-
-impl Debug for TlsListenerConfig {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Unconfigured => write!(f, "TlsListenerConfig::Unconfigured"),
-            Self::Acceptor(_) => write!(f, "TlsListenerConfig::Acceptor(..)"),
-            Self::ServerConfig(_) => write!(f, "TlsListenerConfig::ServerConfig(..)"),
-            Self::Paths { cert, key } => f
-                .debug_struct("TlsListenerConfig::Paths")
-                .field("cert", cert)
-                .field("key", key)
-                .finish(),
-        }
-    }
-}
-
-#[derive(Debug)]
-pub(crate) enum TlsListenerConnection {
-    Addrs(Vec<SocketAddr>),
-    Connected(TcpListener),
-}
-
-impl Display for TlsListenerConnection {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Addrs(addrs) => write!(
-                f,
-                "{}",
-                addrs
-                    .iter()
-                    .map(|a| format!("https://{}", a))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ),
-
-            Self::Connected(tcp) => write!(
-                f,
-                "https://{}",
-                tcp.local_addr()
-                    .ok()
-                    .map(|a| a.to_string())
-                    .as_deref()
-                    .unwrap_or("[unknown]")
-            ),
-        }
-    }
-}
 
 #[derive(Debug)]
 pub struct TlsListener {
-    connection: TlsListenerConnection,
+    connection: TcpConnection,
     config: TlsListenerConfig,
 }
 
 impl TlsListener {
+    pub(crate) fn new(connection: TcpConnection, config: TlsListenerConfig) -> Self {
+        Self { connection, config }
+    }
     pub fn build() -> TlsListenerBuilder {
         TlsListenerBuilder::new()
     }
@@ -127,12 +61,12 @@ impl TlsListener {
     }
 
     async fn connect(&mut self) -> io::Result<&TcpListener> {
-        if let TlsListenerConnection::Addrs(addrs) = &self.connection {
+        if let TcpConnection::Addrs(addrs) = &self.connection {
             let tcp = TcpListener::bind(&addrs[..]).await?;
-            self.connection = TlsListenerConnection::Connected(tcp);
+            self.connection = TcpConnection::Connected(tcp);
         }
 
-        if let TlsListenerConnection::Connected(tcp) = &self.connection {
+        if let TcpConnection::Connected(tcp) = &self.connection {
             Ok(tcp)
         } else {
             unreachable!()
