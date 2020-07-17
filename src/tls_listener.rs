@@ -15,7 +15,6 @@ use std::fmt::{self, Debug, Display, Formatter};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
-use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -77,7 +76,7 @@ impl TlsListener {
     }
 }
 
-fn handle_tls<State: Send + Sync + 'static>(
+fn handle_tls<State: Clone + Send + Sync + 'static>(
     app: Server<State>,
     stream: TcpStream,
     acceptor: TlsAcceptor,
@@ -111,47 +110,43 @@ fn handle_tls<State: Send + Sync + 'static>(
     });
 }
 
-impl<State: Send + Sync + 'static> ToListener<State> for TlsListener {
+impl<State: Clone + Send + Sync + 'static> ToListener<State> for TlsListener {
     type Listener = Self;
     fn to_listener(self) -> io::Result<Self::Listener> {
         Ok(self)
     }
 }
 
-impl<State: Send + Sync + 'static> ToListener<State> for TlsListenerBuilder {
+impl<State: Clone + Send + Sync + 'static> ToListener<State> for TlsListenerBuilder {
     type Listener = TlsListener;
     fn to_listener(self) -> io::Result<Self::Listener> {
         self.build()
     }
 }
 
-impl<State: Send + Sync + 'static> Listener<State> for TlsListener {
-    fn listen<'a>(
-        &'a mut self,
-        app: Server<State>,
-    ) -> Pin<Box<dyn Future<Output = io::Result<()>> + Send + 'a>> {
-        Box::pin(async move {
-            let acceptor = self.configure().await?;
-            let listener = self.connect().await?;
-            let mut incoming = listener.incoming();
+#[tide::utils::async_trait]
+impl<State: Clone + Send + Sync + 'static> Listener<State> for TlsListener {
+    async fn listen(&mut self, app: Server<State>) -> io::Result<()> {
+        let acceptor = self.configure().await?;
+        let listener = self.connect().await?;
+        let mut incoming = listener.incoming();
 
-            while let Some(stream) = incoming.next().await {
-                match stream {
-                    Err(ref e) if is_transient_error(e) => continue,
-                    Err(error) => {
-                        let delay = Duration::from_millis(500);
-                        tide::log::error!("Error: {}. Pausing for {:?}.", error, delay);
-                        task::sleep(delay).await;
-                        continue;
-                    }
+        while let Some(stream) = incoming.next().await {
+            match stream {
+                Err(ref e) if is_transient_error(e) => continue,
+                Err(error) => {
+                    let delay = Duration::from_millis(500);
+                    tide::log::error!("Error: {}. Pausing for {:?}.", error, delay);
+                    task::sleep(delay).await;
+                    continue;
+                }
 
-                    Ok(stream) => {
-                        handle_tls(app.clone(), stream, acceptor.clone());
-                    }
-                };
-            }
-            Ok(())
-        })
+                Ok(stream) => {
+                    handle_tls(app.clone(), stream, acceptor.clone());
+                }
+            };
+        }
+        Ok(())
     }
 }
 
