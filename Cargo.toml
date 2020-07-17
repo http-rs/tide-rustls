@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 async-std = { version = "1.6", features = ["attributes"] }
-tide = { git = "https://github.com/jbr/tide", branch = "to-listener" }
+tide = "0.12"
 async-tls = "0.7"
 rustls = "0.17"
 async-h1 = "2.0"
