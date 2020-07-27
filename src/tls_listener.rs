@@ -104,7 +104,7 @@ fn handle_tls<State: Clone + Send + Sync + 'static>(
             Ok(tls_stream) => {
                 let stream = TlsStreamWrapper::new(tls_stream);
                 let fut = async_h1::accept(stream, |mut req| async {
-                    if let Err(_) = req.url_mut().set_scheme("https") {
+                    if req.url_mut().set_scheme("https").is_err() {
                         tide::log::error!("unable to set https scheme on url", { url: req.url().to_string() });
                     }
 
