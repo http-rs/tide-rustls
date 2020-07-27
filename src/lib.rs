@@ -16,7 +16,7 @@
 //!     )
 //!    .await?;
 //! # }
-//! Ok(()) }) }
+//! # Ok(()) }) }
 //! ```
 #![forbid(unsafe_code, future_incompatible)]
 #![deny(
