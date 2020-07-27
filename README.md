@@ -1,6 +1,6 @@
 # Tide rustls listener
 
-## async tls listener based on [async-tls](https://github.com/async-rs/async-tls) and [rustls](https://github.com/ctz/rustls)
+## tls listener for [tide](https://github.com/http-rs/tide) based on [async-tls](https://github.com/async-rs/async-tls) and [rustls](https://github.com/ctz/rustls)
 
 * [CI ![CI][ci-badge]][ci]
 * [API Docs][docs] [![docs.rs docs][docs-badge]][docs]
