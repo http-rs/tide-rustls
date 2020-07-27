@@ -1,12 +1,38 @@
-# Experimental Tide TLS Listener
+# Tide rustls listener
+## redis-backed session store for [async-session](https://github.com/http-rs/async-session)
 
-To run the example locally:
-* install [mkcert](https://github.com/FiloSottile/mkcert)
-* `$ mkcert -key-file key.pem -cert-file cert.pem localhost 127.0.0.1 ::1`
-* `$ env TIDE_CERT=cert.pem TIDE_KEY=key.pem cargo run --example hello_tls`
-* `$ curl -v https://localhost:4433`
+* [CI ![CI][ci-badge]][ci]
+* [API Docs][docs] [![docs.rs docs][docs-badge]][docs]
+* [Releases][releases] [![crates.io version][version-badge]][lib-rs]
 
-# Outstanding issues
+[ci]: https://github.com/jbr/tide-rustls/actions?query=workflow%3ACI
+[ci-badge]: https://github.com/jbr/tide-rustls/workflows/CI/badge.svg
+[releases]: https://github.com/jbr/tide-rustls/releases
+[docs]: https://docs.rs/tide-rustls
+[lib-rs]: https://lib.rs/tide-rustls
+[docs-badge]: https://img.shields.io/badge/docs-latest-blue.svg?style=flat-square
+[version-badge]: https://img.shields.io/crates/v/tide-rustls.svg?style=flat-square
 
-* `key` currently only works with pkcs8 keys
-* documentation and tests
+## Installation
+```sh
+$ cargo add tide-rustls
+```
+
+## Safety
+This crate uses ``#![deny(unsafe_code)]`` to ensure everything is implemented in
+100% Safe Rust.
+
+## License
+
+<sup>
+Licensed under either of <a href="LICENSE-APACHE">Apache License, Version
+2.0</a> or <a href="LICENSE-MIT">MIT license</a> at your option.
+</sup>
+
+<br/>
+
+<sub>
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in this crate by you, as defined in the Apache-2.0 license, shall
+be dual licensed as above, without any additional terms or conditions.
+</sub>
