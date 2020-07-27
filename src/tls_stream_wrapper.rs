@@ -6,10 +6,10 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 
 #[derive(Clone)]
-pub struct TlsStreamWrapper(Arc<Mutex<TlsStream<TcpStream>>>);
+pub(crate) struct TlsStreamWrapper(Arc<Mutex<TlsStream<TcpStream>>>);
 
 impl TlsStreamWrapper {
-    pub fn new(stream: TlsStream<TcpStream>) -> Self {
+    pub(crate) fn new(stream: TlsStream<TcpStream>) -> Self {
         Self(Arc::new(Mutex::new(stream)))
     }
 }

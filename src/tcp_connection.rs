@@ -2,7 +2,7 @@ use async_std::net::{SocketAddr, TcpListener};
 use std::fmt::{self, Debug, Display, Formatter};
 
 #[derive(Debug)]
-pub enum TcpConnection {
+pub(crate) enum TcpConnection {
     Addrs(Vec<SocketAddr>),
     Connected(TcpListener),
 }

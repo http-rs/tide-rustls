@@ -18,6 +18,7 @@ use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 
+/// The primary type for this crate
 #[derive(Debug)]
 pub struct TlsListener {
     connection: TcpConnection,
@@ -28,6 +29,20 @@ impl TlsListener {
     pub(crate) fn new(connection: TcpConnection, config: TlsListenerConfig) -> Self {
         Self { connection, config }
     }
+    /// The primary entrypoint to create a TlsListener. See
+    /// [TlsListenerBuilder](crate::TlsListenerBuilder) for more
+    /// configuration options.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use tide_rustls::TlsListener;
+    /// let listener = TlsListener::build()
+    ///     .addrs("localhost:4433")
+    ///     .cert("./tls/localhost-4433.cert")
+    ///     .key("./tls/localhost-4433.key")
+    ///     .finish();
+    /// ```
     pub fn build() -> TlsListenerBuilder {
         TlsListenerBuilder::new()
     }
@@ -120,7 +135,7 @@ impl<State: Clone + Send + Sync + 'static> ToListener<State> for TlsListener {
 impl<State: Clone + Send + Sync + 'static> ToListener<State> for TlsListenerBuilder {
     type Listener = TlsListener;
     fn to_listener(self) -> io::Result<Self::Listener> {
-        self.build()
+        self.finish()
     }
 }
 

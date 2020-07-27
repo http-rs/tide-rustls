@@ -10,7 +10,7 @@ impl Default for TlsListenerConfig {
         Self::Unconfigured
     }
 }
-pub enum TlsListenerConfig {
+pub(crate) enum TlsListenerConfig {
     Unconfigured,
     Acceptor(TlsAcceptor),
     ServerConfig(ServerConfig),
