@@ -8,12 +8,12 @@ use async_std::prelude::*;
 use async_std::{io, task};
 
 use async_tls::TlsAcceptor;
-use rustls::internal::pemfile::{certs, pkcs8_private_keys};
+use rustls::internal::pemfile::{certs, pkcs8_private_keys, rsa_private_keys};
 use rustls::{Certificate, NoClientAuth, PrivateKey, ServerConfig};
 
 use std::fmt::{self, Debug, Display, Formatter};
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufReader, Seek, SeekFrom};
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
@@ -171,6 +171,20 @@ fn load_certs(path: &Path) -> io::Result<Vec<Certificate>> {
 }
 
 fn load_keys(path: &Path) -> io::Result<Vec<PrivateKey>> {
-    pkcs8_private_keys(&mut BufReader::new(File::open(path)?))
-        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid key"))
+    let mut bufreader = BufReader::new(File::open(path)?);
+    if let Ok(pkcs8) = pkcs8_private_keys(&mut bufreader) {
+        if !pkcs8.is_empty() {
+            return Ok(pkcs8);
+        }
+    }
+
+    bufreader.seek(SeekFrom::Start(0))?;
+
+    if let Ok(rsa) = rsa_private_keys(&mut bufreader) {
+        if !rsa.is_empty() {
+            return Ok(rsa);
+        }
+    }
+
+    Err(io::Error::new(io::ErrorKind::InvalidInput, "invalid key"))
 }
