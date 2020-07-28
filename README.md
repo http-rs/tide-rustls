@@ -19,6 +19,23 @@
 $ cargo add tide-rustls
 ```
 
+## Using with tide
+```rust
+#[async_std::main]
+async fn main() -> tide::Result<()> {
+    let mut app = tide::new();
+    app.at("/").get(|_| async { Ok("Hello TLS") });
+    app.listen(
+        TlsListener::build()
+            .addrs("localhost:4433")
+            .cert(std::env::var("TIDE_CERT_PATH").unwrap())
+            .key(std::env::var("TIDE_KEY_PATH").unwrap()),
+        )
+        .await?;
+    Ok(())
+}
+```
+
 ## Safety
 This crate uses ``#![deny(unsafe_code)]`` to ensure everything is implemented in
 100% Safe Rust.
