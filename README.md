@@ -6,9 +6,9 @@
 * [API Docs][docs] [![docs.rs docs][docs-badge]][docs]
 * [Releases][releases] [![crates.io version][version-badge]][lib-rs]
 
-[ci]: https://github.com/jbr/tide-rustls/actions?query=workflow%3ACI
-[ci-badge]: https://github.com/jbr/tide-rustls/workflows/CI/badge.svg
-[releases]: https://github.com/jbr/tide-rustls/releases
+[ci]: https://github.com/http-rs/tide-rustls/actions?query=workflow%3ACI
+[ci-badge]: https://github.com/http-rs/tide-rustls/workflows/CI/badge.svg
+[releases]: https://github.com/http-rs/tide-rustls/releases
 [docs]: https://docs.rs/tide-rustls
 [lib-rs]: https://lib.rs/tide-rustls
 [docs-badge]: https://img.shields.io/badge/docs-latest-blue.svg?style=flat-square
