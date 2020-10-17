@@ -166,12 +166,11 @@ impl<State: Clone + Send + Sync + 'static> Listener<State> for TlsListener {
 }
 
 fn is_transient_error(e: &io::Error) -> bool {
-    match e.kind() {
-        io::ErrorKind::ConnectionRefused
-        | io::ErrorKind::ConnectionAborted
-        | io::ErrorKind::ConnectionReset => true,
-        _ => false,
-    }
+    use io::ErrorKind::*;
+    matches!(
+        e.kind(),
+        ConnectionRefused | ConnectionAborted | ConnectionReset
+    )
 }
 
 impl Display for TlsListener {
