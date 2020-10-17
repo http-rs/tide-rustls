@@ -12,9 +12,9 @@ keywords = ["tide", "https", "tls"]
 categories = ["web-programming::http-server", "web-programming"]
 
 [dependencies]
-async-std = { version = "1.6.2", features = ["attributes"] }
-tide = "0.13.0"
-async-tls = "0.9.0"
-rustls = "0.18.0"
-async-h1 = "2.1.0"
-async-dup = "1.2.1"
+async-std = "1.6.5"
+tide = { version = "0.14.0", default-features = false }
+async-tls = "0.10.0"
+rustls = "0.18.1"
+async-h1 = "2.1.2"
+async-dup = "1.2.2"
