@@ -142,8 +142,10 @@ impl<State: Clone + Send + Sync + 'static> ToListener<State> for TlsListenerBuil
 #[tide::utils::async_trait]
 impl<State: Clone + Send + Sync + 'static> Listener<State> for TlsListener {
     async fn listen(&mut self, app: Server<State>) -> io::Result<()> {
+        let s = format!("{}", self);
         let acceptor = self.configure().await?;
         let listener = self.connect().await?;
+        tide::log::info!("Server listening on {}", s);
         let mut incoming = listener.incoming();
 
         while let Some(stream) = incoming.next().await {
