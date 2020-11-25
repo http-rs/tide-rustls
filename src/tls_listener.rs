@@ -1,5 +1,6 @@
 use crate::{TcpConnection, TlsListenerBuilder, TlsListenerConfig, TlsStreamWrapper};
 
+use tide::listener::ListenInfo;
 use tide::listener::{Listener, ToListener};
 use tide::Server;
 
@@ -19,15 +20,36 @@ use std::sync::Arc;
 use std::time::Duration;
 
 /// The primary type for this crate
-#[derive(Debug)]
-pub struct TlsListener {
+pub struct TlsListener<State> {
     connection: TcpConnection,
     config: TlsListenerConfig,
+    server: Option<Server<State>>,
 }
 
-impl TlsListener {
+impl<State> Debug for TlsListener<State> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TlsListener")
+            .field(&"connection", &self.connection)
+            .field(&"config", &self.config)
+            .field(
+                &"server",
+                if self.server.is_some() {
+                    &"Some(Server<State>)"
+                } else {
+                    &"None"
+                },
+            )
+            .finish()
+    }
+}
+
+impl<State> TlsListener<State> {
     pub(crate) fn new(connection: TcpConnection, config: TlsListenerConfig) -> Self {
-        Self { connection, config }
+        Self {
+            connection,
+            config,
+            server: None,
+        }
     }
     /// The primary entrypoint to create a TlsListener. See
     /// [TlsListenerBuilder](crate::TlsListenerBuilder) for more
@@ -37,13 +59,13 @@ impl TlsListener {
     ///
     /// ```rust
     /// # use tide_rustls::TlsListener;
-    /// let listener = TlsListener::build()
+    /// let listener = TlsListener::<()>::build()
     ///     .addrs("localhost:4433")
     ///     .cert("./tls/localhost-4433.cert")
     ///     .key("./tls/localhost-4433.key")
     ///     .finish();
     /// ```
-    pub fn build() -> TlsListenerBuilder {
+    pub fn build() -> TlsListenerBuilder<State> {
         TlsListenerBuilder::new()
     }
 
@@ -74,6 +96,20 @@ impl TlsListener {
                 io::ErrorKind::Other,
                 "could not configure tlslistener",
             ))
+        }
+    }
+
+    fn acceptor(&self) -> Option<&TlsAcceptor> {
+        match self.config {
+            TlsListenerConfig::Acceptor(ref a) => Some(a),
+            _ => None,
+        }
+    }
+
+    fn tcp(&self) -> Option<&TcpListener> {
+        match self.connection {
+            TcpConnection::Connected(ref t) => Some(t),
+            _ => None,
         }
     }
 
@@ -125,30 +161,39 @@ fn handle_tls<State: Clone + Send + Sync + 'static>(
     });
 }
 
-impl<State: Clone + Send + Sync + 'static> ToListener<State> for TlsListener {
+impl<State: Clone + Send + Sync + 'static> ToListener<State> for TlsListener<State> {
     type Listener = Self;
     fn to_listener(self) -> io::Result<Self::Listener> {
         Ok(self)
     }
 }
 
-impl<State: Clone + Send + Sync + 'static> ToListener<State> for TlsListenerBuilder {
-    type Listener = TlsListener;
+impl<State: Clone + Send + Sync + 'static> ToListener<State> for TlsListenerBuilder<State> {
+    type Listener = TlsListener<State>;
     fn to_listener(self) -> io::Result<Self::Listener> {
         self.finish()
     }
 }
 
 #[tide::utils::async_trait]
-impl<State: Clone + Send + Sync + 'static> Listener<State> for TlsListener {
-    async fn listen(&mut self, app: Server<State>) -> io::Result<()> {
-        let acceptor = self.configure().await?;
-        let listener = self.connect().await?;
+impl<State: Clone + Send + Sync + 'static> Listener<State> for TlsListener<State> {
+    async fn bind(&mut self, server: Server<State>) -> io::Result<()> {
+        self.configure().await?;
+        self.connect().await?;
+        self.server = Some(server);
+        Ok(())
+    }
+
+    async fn accept(&mut self) -> io::Result<()> {
+        let listener = self.tcp().unwrap();
         let mut incoming = listener.incoming();
+        let acceptor = self.acceptor().unwrap();
+        let server = self.server.as_ref().unwrap();
 
         while let Some(stream) = incoming.next().await {
             match stream {
                 Err(ref e) if is_transient_error(e) => continue,
+
                 Err(error) => {
                     let delay = Duration::from_millis(500);
                     tide::log::error!("Error: {}. Pausing for {:?}.", error, delay);
@@ -156,12 +201,18 @@ impl<State: Clone + Send + Sync + 'static> Listener<State> for TlsListener {
                     continue;
                 }
 
-                Ok(stream) => {
-                    handle_tls(app.clone(), stream, acceptor.clone());
-                }
+                Ok(stream) => handle_tls(server.clone(), stream, acceptor.clone()),
             };
         }
         Ok(())
+    }
+
+    fn info(&self) -> Vec<ListenInfo> {
+        vec![ListenInfo::new(
+            self.connection.to_string(),
+            String::from("tcp"),
+            true,
+        )]
     }
 }
 
@@ -173,7 +224,7 @@ fn is_transient_error(e: &io::Error) -> bool {
     )
 }
 
-impl Display for TlsListener {
+impl<State> Display for TlsListener<State> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.connection)
     }
