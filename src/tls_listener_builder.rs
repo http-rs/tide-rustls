@@ -5,6 +5,7 @@ use rustls::ServerConfig;
 
 use super::{TcpConnection, TlsListener, TlsListenerConfig};
 
+use std::marker::PhantomData;
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::path::{Path, PathBuf};
 
@@ -19,7 +20,7 @@ use std::path::{Path, PathBuf};
 ///
 /// ```rust
 /// # use tide_rustls::TlsListener;
-/// let listener = TlsListener::build()
+/// let listener = TlsListener::<()>::build()
 ///     .addrs("localhost:4433")
 ///     .cert("./tls/localhost-4433.cert")
 ///     .key("./tls/localhost-4433.key")
@@ -28,21 +29,34 @@ use std::path::{Path, PathBuf};
 ///
 /// ```rust
 /// # use tide_rustls::TlsListener;
-/// let listener = TlsListener::build()
+/// let listener = TlsListener::<()>::build()
 ///     .tcp(std::net::TcpListener::bind("localhost:4433").unwrap())
 ///     .config(rustls::ServerConfig::new(rustls::NoClientAuth::new()))
 ///     .finish();
 /// ```
-#[derive(Default)]
-pub struct TlsListenerBuilder {
+pub struct TlsListenerBuilder<State> {
     key: Option<PathBuf>,
     cert: Option<PathBuf>,
     config: Option<ServerConfig>,
     tcp: Option<TcpListener>,
     addrs: Option<Vec<SocketAddr>>,
+    _state: PhantomData<State>,
 }
 
-impl std::fmt::Debug for TlsListenerBuilder {
+impl<State> Default for TlsListenerBuilder<State> {
+    fn default() -> Self {
+        Self {
+            key: None,
+            cert: None,
+            config: None,
+            tcp: None,
+            addrs: None,
+            _state: PhantomData,
+        }
+    }
+}
+
+impl<State> std::fmt::Debug for TlsListenerBuilder<State> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TlsListenerBuilder")
             .field("key", &self.key)
@@ -61,9 +75,9 @@ impl std::fmt::Debug for TlsListenerBuilder {
     }
 }
 
-impl TlsListenerBuilder {
+impl<State> TlsListenerBuilder<State> {
     pub(crate) fn new() -> Self {
-        TlsListenerBuilder::default()
+        Self::default()
     }
 
     /// Provide a path to a key file, in either pkcs8 or rsa
@@ -123,13 +137,14 @@ impl TlsListenerBuilder {
     /// * either of these is provided, but not both
     ///   * both [`TlsListenerBuilder::cert`] AND [`TlsListenerBuilder::key`]
     ///   * [`TlsListenerBuilder::config`]
-    pub fn finish(self) -> io::Result<TlsListener> {
+    pub fn finish(self) -> io::Result<TlsListener<State>> {
         let Self {
             key,
             cert,
             config,
             tcp,
             addrs,
+            ..
         } = self;
 
         let config = match (key, cert, config) {
