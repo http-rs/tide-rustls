@@ -1,6 +1,6 @@
 [package]
 name = "tide-rustls"
-version = "0.1.4"
+version = "0.1.5"
 authors = ["Jacob Rothstein <hi@jbr.me>"]
 edition = "2018"
 description = "tide tls listener based on async-tls and rustls"
