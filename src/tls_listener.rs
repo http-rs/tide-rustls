@@ -69,7 +69,7 @@ impl<State> TlsListener<State> {
         TlsListenerBuilder::new()
     }
 
-    async fn configure(&mut self) -> io::Result<TlsAcceptor> {
+    async fn configure(&mut self) -> io::Result<()> {
         self.config = match std::mem::take(&mut self.config) {
             TlsListenerConfig::Paths { cert, key } => {
                 let certs = load_certs(&cert)?;
@@ -86,17 +86,17 @@ impl<State> TlsListener<State> {
                 TlsListenerConfig::Acceptor(TlsAcceptor::from(Arc::new(config)))
             }
 
-            other => other,
+            other @ TlsListenerConfig::Acceptor(_) => other,
+
+            TlsListenerConfig::Unconfigured => {
+                return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    "could not configure tlslistener",
+                ));
+            }
         };
 
-        if let TlsListenerConfig::Acceptor(ref a) = self.config {
-            Ok(a.clone())
-        } else {
-            Err(io::Error::new(
-                io::ErrorKind::Other,
-                "could not configure tlslistener",
-            ))
-        }
+        Ok(())
     }
 
     fn acceptor(&self) -> Option<&TlsAcceptor> {
@@ -113,17 +113,12 @@ impl<State> TlsListener<State> {
         }
     }
 
-    async fn connect(&mut self) -> io::Result<&TcpListener> {
+    async fn connect(&mut self) -> io::Result<()> {
         if let TcpConnection::Addrs(addrs) = &self.connection {
             let tcp = TcpListener::bind(&addrs[..]).await?;
             self.connection = TcpConnection::Connected(tcp);
         }
-
-        if let TcpConnection::Connected(tcp) = &self.connection {
-            Ok(tcp)
-        } else {
-            unreachable!()
-        }
+        Ok(())
     }
 }
 
