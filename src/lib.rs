@@ -41,5 +41,5 @@ pub(crate) use tls_stream_wrapper::TlsStreamWrapper;
 pub use tls_listener::TlsListener;
 pub use tls_listener_builder::TlsListenerBuilder;
 
-pub use async_tls;
+pub use async_rustls;
 pub use rustls;

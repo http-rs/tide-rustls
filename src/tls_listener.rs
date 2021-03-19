@@ -8,7 +8,7 @@ use async_std::net::{TcpListener, TcpStream};
 use async_std::prelude::*;
 use async_std::{io, task};
 
-use async_tls::TlsAcceptor;
+use async_rustls::TlsAcceptor;
 use rustls::internal::pemfile::{certs, pkcs8_private_keys, rsa_private_keys};
 use rustls::{Certificate, NoClientAuth, PrivateKey, ServerConfig};
 
