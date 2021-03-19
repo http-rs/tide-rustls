@@ -1,4 +1,7 @@
-use crate::{TcpConnection, TlsListenerBuilder, TlsListenerConfig, TlsStreamWrapper};
+use crate::custom_tls_acceptor::StandardTlsAcceptor;
+use crate::{
+    CustomTlsAcceptor, TcpConnection, TlsListenerBuilder, TlsListenerConfig, TlsStreamWrapper,
+};
 
 use tide::listener::ListenInfo;
 use tide::listener::{Listener, ToListener};
@@ -79,12 +82,14 @@ impl<State> TlsListener<State> {
                     .set_single_cert(certs, keys.remove(0))
                     .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
 
-                TlsListenerConfig::Acceptor(TlsAcceptor::from(Arc::new(config)))
+                TlsListenerConfig::Acceptor(Arc::new(StandardTlsAcceptor(TlsAcceptor::from(
+                    Arc::new(config),
+                ))))
             }
 
-            TlsListenerConfig::ServerConfig(config) => {
-                TlsListenerConfig::Acceptor(TlsAcceptor::from(Arc::new(config)))
-            }
+            TlsListenerConfig::ServerConfig(config) => TlsListenerConfig::Acceptor(Arc::new(
+                StandardTlsAcceptor(TlsAcceptor::from(Arc::new(config))),
+            )),
 
             other @ TlsListenerConfig::Acceptor(_) => other,
 
@@ -99,7 +104,7 @@ impl<State> TlsListener<State> {
         Ok(())
     }
 
-    fn acceptor(&self) -> Option<&TlsAcceptor> {
+    fn acceptor(&self) -> Option<&Arc<dyn CustomTlsAcceptor>> {
         match self.config {
             TlsListenerConfig::Acceptor(ref a) => Some(a),
             _ => None,
@@ -125,14 +130,16 @@ impl<State> TlsListener<State> {
 fn handle_tls<State: Clone + Send + Sync + 'static>(
     app: Server<State>,
     stream: TcpStream,
-    acceptor: TlsAcceptor,
+    acceptor: Arc<dyn CustomTlsAcceptor>,
 ) {
     task::spawn(async move {
         let local_addr = stream.local_addr().ok();
         let peer_addr = stream.peer_addr().ok();
 
         match acceptor.accept(stream).await {
-            Ok(tls_stream) => {
+            Ok(None) => {}
+
+            Ok(Some(tls_stream)) => {
                 let stream = TlsStreamWrapper::new(tls_stream);
                 let fut = async_h1::accept(stream, |mut req| async {
                     if req.url_mut().set_scheme("https").is_err() {

@@ -1,9 +1,11 @@
 use std::fmt::{self, Debug, Formatter};
 
-use async_rustls::TlsAcceptor;
 use rustls::ServerConfig;
 
+use super::CustomTlsAcceptor;
+
 use std::path::PathBuf;
+use std::sync::Arc;
 
 impl Default for TlsListenerConfig {
     fn default() -> Self {
@@ -12,7 +14,7 @@ impl Default for TlsListenerConfig {
 }
 pub(crate) enum TlsListenerConfig {
     Unconfigured,
-    Acceptor(TlsAcceptor),
+    Acceptor(Arc<dyn CustomTlsAcceptor>),
     ServerConfig(ServerConfig),
     Paths { cert: PathBuf, key: PathBuf },
 }

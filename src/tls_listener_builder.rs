@@ -3,11 +3,12 @@ use async_std::net::TcpListener;
 
 use rustls::ServerConfig;
 
-use super::{TcpConnection, TlsListener, TlsListenerConfig};
+use super::{CustomTlsAcceptor, TcpConnection, TlsListener, TlsListenerConfig};
 
 use std::marker::PhantomData;
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 /// # A builder for TlsListeners
 ///
@@ -38,6 +39,7 @@ pub struct TlsListenerBuilder<State> {
     key: Option<PathBuf>,
     cert: Option<PathBuf>,
     config: Option<ServerConfig>,
+    tls_acceptor: Option<Arc<dyn CustomTlsAcceptor>>,
     tcp: Option<TcpListener>,
     addrs: Option<Vec<SocketAddr>>,
     _state: PhantomData<State>,
@@ -49,6 +51,7 @@ impl<State> Default for TlsListenerBuilder<State> {
             key: None,
             cert: None,
             config: None,
+            tls_acceptor: None,
             tcp: None,
             addrs: None,
             _state: PhantomData,
@@ -65,6 +68,14 @@ impl<State> std::fmt::Debug for TlsListenerBuilder<State> {
                 "config",
                 &if self.config.is_some() {
                     "Some(ServerConfig { .. })"
+                } else {
+                    "None"
+                },
+            )
+            .field(
+                "tls_acceptor",
+                &if self.tls_acceptor.is_some() {
+                    "Some(_)"
                 } else {
                     "None"
                 },
@@ -108,6 +119,17 @@ impl<State> TlsListenerBuilder<State> {
         self
     }
 
+    /// Provides a custom acceptor for TLS connections.  This is mutually
+    /// exclusive with any of [`TlsListenerBuilder::key`],
+    /// [`TlsListenerBuilder::cert`], and [`TlsListenerBuilder::config`], but
+    /// gives total control over accepting TLS connections, including
+    /// multiplexing other streams or ALPN negotiations on the same TLS
+    /// connection that tide should ignore.
+    pub fn tls_acceptor(mut self, acceptor: Arc<dyn CustomTlsAcceptor>) -> Self {
+        self.tls_acceptor = Some(acceptor);
+        self
+    }
+
     /// Provides a bound tcp listener (either async-std or std) to
     /// build this tls listener on. This is mutually exclusive with
     /// [`TlsListenerBuilder::addrs`], but one of them is mandatory.
@@ -134,26 +156,29 @@ impl<State> TlsListenerBuilder<State> {
     /// * either of these is provided, but not both
     ///   * [`TlsListenerBuilder::tcp`]
     ///   * [`TlsListenerBuilder::addrs`]
-    /// * either of these is provided, but not both
+    /// * exactly one of these is provided
     ///   * both [`TlsListenerBuilder::cert`] AND [`TlsListenerBuilder::key`]
     ///   * [`TlsListenerBuilder::config`]
+    ///   * [`TlsListenerBuilder::tls_acceptor`]
     pub fn finish(self) -> io::Result<TlsListener<State>> {
         let Self {
             key,
             cert,
             config,
+            tls_acceptor,
             tcp,
             addrs,
             ..
         } = self;
 
-        let config = match (key, cert, config) {
-            (Some(key), Some(cert), None) => TlsListenerConfig::Paths { key, cert },
-            (None, None, Some(config)) => TlsListenerConfig::ServerConfig(config),
+        let config = match (key, cert, config, tls_acceptor) {
+            (Some(key), Some(cert), None, None) => TlsListenerConfig::Paths { key, cert },
+            (None, None, Some(config), None) => TlsListenerConfig::ServerConfig(config),
+            (None, None, None, Some(tls_acceptor)) => TlsListenerConfig::Acceptor(tls_acceptor),
             _ => {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidInput,
-                    "either cert + key are required or a ServerConfig",
+                    "need exactly one of cert + key, ServerConfig, or TLS acceptor",
                 ))
             }
         };
