@@ -1,6 +1,6 @@
 use std::fmt::{self, Debug, Formatter};
 
-use async_tls::TlsAcceptor;
+use async_rustls::TlsAcceptor;
 use rustls::ServerConfig;
 
 use std::path::PathBuf;
