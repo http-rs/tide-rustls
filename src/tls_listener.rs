@@ -27,6 +27,8 @@ pub struct TlsListener<State> {
     connection: TcpConnection,
     config: TlsListenerConfig,
     server: Option<Server<State>>,
+    tcp_nodelay: Option<bool>,
+    tcp_ttl: Option<u32>,
 }
 
 impl<State> Debug for TlsListener<State> {
@@ -52,6 +54,8 @@ impl<State> TlsListener<State> {
             connection,
             config,
             server: None,
+            tcp_nodelay: None,
+            tcp_ttl: None,
         }
     }
     /// The primary entrypoint to create a TlsListener. See
@@ -124,6 +128,32 @@ impl<State> TlsListener<State> {
             self.connection = TcpConnection::Connected(tcp);
         }
         Ok(())
+    }
+
+    /// Set TCP_NODELAY socket option.
+    pub fn set_nodelay(&mut self, nodelay: bool) {
+        self.tcp_nodelay = Some(nodelay);
+    }
+
+    /// Get TCP_NODELAY socket option.
+    pub fn nodelay(&self) -> Option<bool> {
+        self.tcp_nodelay
+    }
+
+    /// Set TCP_NODELAY socket option.
+    pub fn with_nodelay(mut self, nodelay: bool) -> Self {
+        self.set_nodelay(nodelay);
+        self
+    }
+
+    /// Set TTL option.
+    pub fn set_ttl(&mut self, ttl: u32) {
+        self.tcp_ttl = Some(ttl);
+    }
+
+    /// Get TTL option.
+    pub fn ttl(&self) -> Option<u32> {
+        self.tcp_ttl
     }
 }
 
@@ -203,7 +233,17 @@ impl<State: Clone + Send + Sync + 'static> Listener<State> for TlsListener<State
                     continue;
                 }
 
-                Ok(stream) => handle_tls(server.clone(), stream, acceptor.clone()),
+                Ok(stream) => {
+                    if let Some(nodelay) = self.tcp_nodelay {
+                        stream.set_nodelay(nodelay)?;
+                    }
+
+                    if let Some(ttl) = self.tcp_ttl {
+                        stream.set_ttl(ttl)?;
+                    }
+
+                    handle_tls(server.clone(), stream, acceptor.clone())
+                },
             };
         }
         Ok(())
