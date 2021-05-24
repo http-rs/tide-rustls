@@ -42,6 +42,8 @@ pub struct TlsListenerBuilder<State> {
     tls_acceptor: Option<Arc<dyn CustomTlsAcceptor>>,
     tcp: Option<TcpListener>,
     addrs: Option<Vec<SocketAddr>>,
+    tcp_nodelay: Option<bool>,
+    tcp_ttl: Option<u32>,
     _state: PhantomData<State>,
 }
 
@@ -54,6 +56,8 @@ impl<State> Default for TlsListenerBuilder<State> {
             tls_acceptor: None,
             tcp: None,
             addrs: None,
+            tcp_nodelay: None,
+            tcp_ttl: None,
             _state: PhantomData,
         }
     }
@@ -148,6 +152,18 @@ impl<State> TlsListenerBuilder<State> {
         self
     }
 
+    /// Provides a TCP_NODELAY option for this tls listener.
+    pub fn nodelay(mut self, nodelay: bool) -> Self {
+        self.tcp_nodelay = Some(nodelay);
+        self
+    }
+
+    /// Provides a TTL option for this tls listener.
+    pub fn ttl(mut self, ttl: u32) -> Self {
+        self.tcp_ttl = Some(ttl);
+        self
+    }
+
     /// finishes building a TlsListener from this TlsListenerBuilder.
     ///
     /// # Errors
@@ -168,6 +184,8 @@ impl<State> TlsListenerBuilder<State> {
             tls_acceptor,
             tcp,
             addrs,
+            tcp_nodelay,
+            tcp_ttl,
             ..
         } = self;
 
@@ -194,6 +212,6 @@ impl<State> TlsListenerBuilder<State> {
             }
         };
 
-        Ok(TlsListener::new(connection, config))
+        Ok(TlsListener::new(connection, config, tcp_nodelay, tcp_ttl))
     }
 }
