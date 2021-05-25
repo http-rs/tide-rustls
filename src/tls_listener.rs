@@ -44,12 +44,19 @@ impl<State> Debug for TlsListener<State> {
                     &"None"
                 },
             )
+            .field("tcp_ttl", &self.tcp_ttl)
+            .field("tcp_nodelay", &self.tcp_nodelay)
             .finish()
     }
 }
 
 impl<State> TlsListener<State> {
-    pub(crate) fn new(connection: TcpConnection, config: TlsListenerConfig, tcp_nodelay: Option<bool>, tcp_ttl: Option<u32>) -> Self {
+    pub(crate) fn new(
+        connection: TcpConnection,
+        config: TlsListenerConfig,
+        tcp_nodelay: Option<bool>,
+        tcp_ttl: Option<u32>,
+    ) -> Self {
         Self {
             connection,
             config,

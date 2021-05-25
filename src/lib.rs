@@ -1,10 +1,10 @@
-//! tide tls listener built on async-tls and rustls
+//! tide tls listener built on async-rustls and rustls
 //!
 //!
 //! # Example
 //! ```rust
 //! # use tide_rustls::TlsListener;
-//! fn main() -> tide::Result<()> { async_std::task::block_on(async {
+//! # fn main() -> tide::Result<()> { async_std::task::block_on(async {
 //!     let mut app = tide::new();
 //!     app.at("/").get(|_| async { Ok("Hello tls") });
 //! # if false {
@@ -15,8 +15,7 @@
 //!             .key(std::env::var("TIDE_KEY_PATH").unwrap()),
 //!     )
 //!    .await?;
-//! # }
-//! # Ok(()) }) }
+//! # } Ok(()) }) }
 //! ```
 #![forbid(unsafe_code, future_incompatible)]
 #![deny(

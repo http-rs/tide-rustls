@@ -35,6 +35,18 @@ use std::sync::Arc;
 ///     .config(rustls::ServerConfig::new(rustls::NoClientAuth::new()))
 ///     .finish();
 /// ```
+///
+/// ```rust
+/// # use tide_rustls::TlsListener;
+/// let listener = TlsListener::<()>::build()
+///     .addrs("localhost:4433")
+///     .cert("./tls/localhost-4433.cert")
+///     .key("./tls/localhost-4433.key")
+///     .tcp_ttl(60)
+///     .tcp_nodelay(true)
+///     .finish();
+/// ```
+
 pub struct TlsListenerBuilder<State> {
     key: Option<PathBuf>,
     cert: Option<PathBuf>,
@@ -86,6 +98,8 @@ impl<State> std::fmt::Debug for TlsListenerBuilder<State> {
             )
             .field("tcp", &self.tcp)
             .field("addrs", &self.addrs)
+            .field("tcp_nodelay", &self.tcp_nodelay)
+            .field("tcp_ttl", &self.tcp_ttl)
             .finish()
     }
 }
@@ -153,13 +167,13 @@ impl<State> TlsListenerBuilder<State> {
     }
 
     /// Provides a TCP_NODELAY option for this tls listener.
-    pub fn nodelay(mut self, nodelay: bool) -> Self {
+    pub fn tcp_nodelay(mut self, nodelay: bool) -> Self {
         self.tcp_nodelay = Some(nodelay);
         self
     }
 
-    /// Provides a TTL option for this tls listener.
-    pub fn ttl(mut self, ttl: u32) -> Self {
+    /// Provides a TTL option for this tls listener, in seconds.
+    pub fn tcp_ttl(mut self, ttl: u32) -> Self {
         self.tcp_ttl = Some(ttl);
         self
     }
